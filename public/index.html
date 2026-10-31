@@ -7,55 +7,133 @@
     <style>
         body { font-family: sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #333; text-align: center; }
+        h2, h3 { color: #333; text-align: center; margin-top: 0; }
         input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:hover { background: #0056b3; }
-        .btn-green { background: #28a745; }
-        .btn-green:hover { background: #218838; }
-        .btn-orange { background: #fd7e14; }
-        .btn-orange:hover { background: #e36a0b; }
+        .btn-green { background: #28a745; } .btn-green:hover { background: #218838; }
+        .btn-orange { background: #fd7e14; } .btn-orange:hover { background: #e36a0b; }
+        .btn-gray { background: #6c757d; } .btn-gray:hover { background: #5a6268; }
         #result { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; display: none; word-wrap: break-word; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
+        .error-text { color: red; font-size: 14px; margin-top: 5px; display: none; }
     </style>
 </head>
 <body>
 
     <h2>🤝 Jasa Rekber</h2>
 
-    <!-- PANEL PENJUAL -->
-    <div class="card">
-        <h3>Panel Penjual (Buat Transaksi)</h3>
-        <input type="text" id="itemName" placeholder="Nama Barang (Cth: HP Bekas)">
-        <input type="number" id="amount" placeholder="Harga (Cth: 1500000)">
-        <input type="text" id="buyerPhone" placeholder="No HP Pembeli">
-        <button onclick="buatTransaksi()">Buat Link Transaksi</button>
-        <div id="result"></div>
+    <div id="authPanel" class="card">
+        <h3 id="authTitle">Login</h3>
+        <input type="text" id="authName" placeholder="Nama Lengkap (Khusus Daftar)" class="hidden">
+        <input type="text" id="authPhone" placeholder="Nomor HP">
+        <input type="password" id="authPassword" placeholder="Password">
+        <div id="authError" class="error-text"></div>
+        <button id="btnAuthSubmit" onclick="submitAuth()">Masuk</button>
+        <button class="btn-gray" style="margin-top:10px; font-size:14px;" onclick="toggleAuthMode()" id="btnToggleAuth">Belum punya akun? Daftar disini</button>
     </div>
 
-    <!-- PANEL PEMBELI / CEK STATUS -->
-    <div class="card">
-        <h3>Cek Transaksi / Aksi</h3>
-        <input type="text" id="trxCode" placeholder="Masukkan Kode (Cth: RKB-XXXXXX)">
-        <button onclick="cekTransaksi()" style="background:#6c757d;">Cek Status</button>
-        
-        <div id="trxDetails" style="margin-top: 15px; display:none; border-top: 1px solid #ccc; padding-top: 10px;">
-            <p><b>Barang:</b> <span id="dtlItem"></span></p>
-            <p><b>Harga:</b> Rp <span id="dtlAmount"></span></p>
-            <p><b>Status:</b> <span id="dtlStatus" style="font-weight:bold; color:blue;"></span></p>
-            <p><b>Resi:</b> <span id="dtlAwb">-</span></p>
+    <div id="mainPanel" class="hidden">
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding: 15px 20px;">
+            <b id="welcomeText">Halo, User!</b>
+            <button style="width:auto; margin:0; padding:8px 15px; background:#dc3545; font-size:12px;" onclick="logout()">Logout</button>
+        </div>
 
-            <!-- Tombol Aksi -->
-            <button id="btnPay" class="btn-green hidden" onclick="aksiBayar()">Bayar Sekarang (Dana Ditahan)</button>
-            <button id="btnShip" class="btn-orange hidden" onclick="aksiKirim()">Input Resi (Penjual Kirim)</button>
-            <button id="btnConfirm" class="btn-green hidden" onclick="aksiTerima()">Barang Diterima (Lepas Dana)</button>
+        <div class="card">
+            <h3>Panel Penjual (Buat Transaksi)</h3>
+            <input type="text" id="itemName" placeholder="Nama Barang (Cth: HP Bekas)">
+            <input type="number" id="amount" placeholder="Harga (Cth: 1500000)">
+            <input type="text" id="buyerPhone" placeholder="No HP Pembeli">
+            <button onclick="buatTransaksi()">Buat Link Transaksi</button>
+            <div id="result"></div>
+        </div>
+
+        <div class="card">
+            <h3>Cek Transaksi / Aksi</h3>
+            <input type="text" id="trxCode" placeholder="Masukkan Kode (Cth: RKB-XXXXXX)">
+            <button onclick="cekTransaksi()" class="btn-gray">Cek Status</button>
+            
+            <div id="trxDetails" style="margin-top: 15px; display:none; border-top: 1px solid #ccc; padding-top: 10px;">
+                <p><b>Barang:</b> <span id="dtlItem"></span></p>
+                <p><b>Harga:</b> Rp <span id="dtlAmount"></span></p>
+                <p><b>Status:</b> <span id="dtlStatus" style="font-weight:bold; color:blue;"></span></p>
+                <p><b>Resi:</b> <span id="dtlAwb">-</span></p>
+
+                <button id="btnPay" class="btn-green hidden" onclick="aksiBayar()">Bayar Sekarang (Dana Ditahan)</button>
+                <button id="btnShip" class="btn-orange hidden" onclick="aksiKirim()">Input Resi (Penjual Kirim)</button>
+                <button id="btnConfirm" class="btn-green hidden" onclick="aksiTerima()">Barang Diterima (Lepas Dana)</button>
+            </div>
         </div>
     </div>
 
     <script>
         let currentCode = '';
+        let isLoginMode = true;
+        let currentUser = null;
 
-        // 1. Buat Transaksi
+        window.onload = () => {
+            const savedUser = localStorage.getItem('rekberUser');
+            if(savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showMainPanel();
+            }
+        };
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authTitle').innerText = isLoginMode ? 'Login' : 'Daftar Akun';
+            document.getElementById('btnAuthSubmit').innerText = isLoginMode ? 'Masuk' : 'Daftar';
+            document.getElementById('btnToggleAuth').innerText = isLoginMode ? 'Belum punya akun? Daftar disini' : 'Sudah punya akun? Login disini';
+            document.getElementById('authName').classList.toggle('hidden', isLoginMode);
+            document.getElementById('authError').style.display = 'none';
+        }
+
+        async function submitAuth() {
+            const name = document.getElementById('authName').value;
+            const phone = document.getElementById('authPhone').value;
+            const password = document.getElementById('authPassword').value;
+            const errDiv = document.getElementById('authError');
+            
+            const url = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+            const payload = isLoginMode ? { phone, password } : { name, phone, password };
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    currentUser = data.data;
+                    localStorage.setItem('rekberUser', JSON.stringify(currentUser));
+                    showMainPanel();
+                } else {
+                    // MENAMPILKAN DETAIL ERROR JIKA ADA
+                    errDiv.innerText = data.message + (data.detail ? " : " + data.detail : "");
+                    errDiv.style.display = 'block';
+                }
+            } catch (e) {
+                errDiv.innerText = "Gagal terhubung ke server.";
+                errDiv.style.display = 'block';
+            }
+        }
+
+        function showMainPanel() {
+            document.getElementById('authPanel').classList.add('hidden');
+            document.getElementById('mainPanel').classList.remove('hidden');
+            document.getElementById('welcomeText').innerText = `Halo, ${currentUser.name}`;
+        }
+
+        function logout() {
+            localStorage.removeItem('rekberUser');
+            currentUser = null;
+            document.getElementById('mainPanel').classList.add('hidden');
+            document.getElementById('authPanel').classList.remove('hidden');
+            document.getElementById('authPassword').value = '';
+        }
+
         async function buatTransaksi() {
             const itemName = document.getElementById('itemName').value;
             const amount = parseInt(document.getElementById('amount').value);
@@ -66,7 +144,7 @@
             const res = await fetch('/api/transactions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sellerId: 'user-1', buyerPhone, itemName, amount })
+                body: JSON.stringify({ sellerId: currentUser.id, buyerPhone, itemName, amount })
             });
             const data = await res.json();
             
@@ -81,7 +159,6 @@
             }
         }
 
-        // 2. Cek Status
         async function cekTransaksi() {
             currentCode = document.getElementById('trxCode').value.toUpperCase();
             if(!currentCode) return;
@@ -97,12 +174,10 @@
                 document.getElementById('dtlStatus').innerText = trx.status;
                 document.getElementById('dtlAwb').innerText = trx.awb || '-';
 
-                // Reset tombol
                 document.getElementById('btnPay').classList.add('hidden');
                 document.getElementById('btnShip').classList.add('hidden');
                 document.getElementById('btnConfirm').classList.add('hidden');
 
-                // Tampilkan tombol sesuai status
                 if(trx.status === 'AWAITING_PAYMENT') {
                     document.getElementById('btnPay').classList.remove('hidden');
                 } else if(trx.status === 'PAID_HELD') {
@@ -116,15 +191,13 @@
             }
         }
 
-        // 3. Aksi Bayar
         async function aksiBayar() {
             const res = await fetch(`/api/transactions/${currentCode}/pay`, { method: 'POST' });
             const data = await res.json();
             alert(data.message);
-            cekTransaksi(); // Refresh tampilan
+            cekTransaksi();
         }
 
-        // 4. Aksi Kirim
         async function aksiKirim() {
             const awb = prompt("Masukkan Nomor Resi Pengiriman:");
             if(!awb) return;
@@ -138,7 +211,6 @@
             cekTransaksi();
         }
 
-        // 5. Aksi Terima
         async function aksiTerima() {
             if(!confirm("Yakin barang sudah diterima dan sesuai? Dana akan dilepas ke penjual.")) return;
             const res = await fetch(`/api/transactions/${currentCode}/confirm`, { method: 'POST' });

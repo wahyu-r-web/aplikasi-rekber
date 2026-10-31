@@ -4,6 +4,7 @@ export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   phone: text('phone').notNull(),
+  password: text('password'), // <--- INI YANG TADI TERLEWAT
   role: text('role').notNull().default('BUYER'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
