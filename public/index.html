@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Rekber</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #333; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #0056b3; }
+        .btn-green { background: #28a745; }
+        .btn-green:hover { background: #218838; }
+        .btn-orange { background: #fd7e14; }
+        .btn-orange:hover { background: #e36a0b; }
+        #result { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; display: none; word-wrap: break-word; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <h2>🤝 Jasa Rekber</h2>
+
+    <!-- PANEL PENJUAL -->
+    <div class="card">
+        <h3>Panel Penjual (Buat Transaksi)</h3>
+        <input type="text" id="itemName" placeholder="Nama Barang (Cth: HP Bekas)">
+        <input type="number" id="amount" placeholder="Harga (Cth: 1500000)">
+        <input type="text" id="buyerPhone" placeholder="No HP Pembeli">
+        <button onclick="buatTransaksi()">Buat Link Transaksi</button>
+        <div id="result"></div>
+    </div>
+
+    <!-- PANEL PEMBELI / CEK STATUS -->
+    <div class="card">
+        <h3>Cek Transaksi / Aksi</h3>
+        <input type="text" id="trxCode" placeholder="Masukkan Kode (Cth: RKB-XXXXXX)">
+        <button onclick="cekTransaksi()" style="background:#6c757d;">Cek Status</button>
+        
+        <div id="trxDetails" style="margin-top: 15px; display:none; border-top: 1px solid #ccc; padding-top: 10px;">
+            <p><b>Barang:</b> <span id="dtlItem"></span></p>
+            <p><b>Harga:</b> Rp <span id="dtlAmount"></span></p>
+            <p><b>Status:</b> <span id="dtlStatus" style="font-weight:bold; color:blue;"></span></p>
+            <p><b>Resi:</b> <span id="dtlAwb">-</span></p>
+
+            <!-- Tombol Aksi -->
+            <button id="btnPay" class="btn-green hidden" onclick="aksiBayar()">Bayar Sekarang (Dana Ditahan)</button>
+            <button id="btnShip" class="btn-orange hidden" onclick="aksiKirim()">Input Resi (Penjual Kirim)</button>
+            <button id="btnConfirm" class="btn-green hidden" onclick="aksiTerima()">Barang Diterima (Lepas Dana)</button>
+        </div>
+    </div>
+
+    <script>
+        let currentCode = '';
+
+        // 1. Buat Transaksi
+        async function buatTransaksi() {
+            const itemName = document.getElementById('itemName').value;
+            const amount = parseInt(document.getElementById('amount').value);
+            const buyerPhone = document.getElementById('buyerPhone').value;
+
+            if(!itemName || !amount || !buyerPhone) return alert('Isi semua data!');
+
+            const res = await fetch('/api/transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sellerId: 'user-1', buyerPhone, itemName, amount })
+            });
+            const data = await res.json();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            
+            if(data.success) {
+                resultDiv.innerHTML = `Berhasil! Kode Transaksi: <br><b style="font-size:20px; color:red;">${data.data.kodeTransaksi}</b><br>Berikan kode ini ke pembeli.`;
+                document.getElementById('trxCode').value = data.data.kodeTransaksi;
+            } else {
+                resultDiv.innerHTML = `Gagal: ${data.message}`;
+            }
+        }
+
+        // 2. Cek Status
+        async function cekTransaksi() {
+            currentCode = document.getElementById('trxCode').value.toUpperCase();
+            if(!currentCode) return;
+
+            const res = await fetch('/api/transactions/' + currentCode);
+            const data = await res.json();
+
+            if(data.success) {
+                const trx = data.data;
+                document.getElementById('trxDetails').style.display = 'block';
+                document.getElementById('dtlItem').innerText = trx.itemName;
+                document.getElementById('dtlAmount').innerText = trx.amount.toLocaleString('id-ID');
+                document.getElementById('dtlStatus').innerText = trx.status;
+                document.getElementById('dtlAwb').innerText = trx.awb || '-';
+
+                // Reset tombol
+                document.getElementById('btnPay').classList.add('hidden');
+                document.getElementById('btnShip').classList.add('hidden');
+                document.getElementById('btnConfirm').classList.add('hidden');
+
+                // Tampilkan tombol sesuai status
+                if(trx.status === 'AWAITING_PAYMENT') {
+                    document.getElementById('btnPay').classList.remove('hidden');
+                } else if(trx.status === 'PAID_HELD') {
+                    document.getElementById('btnShip').classList.remove('hidden');
+                } else if(trx.status === 'SHIPPED') {
+                    document.getElementById('btnConfirm').classList.remove('hidden');
+                }
+            } else {
+                alert('Transaksi tidak ditemukan!');
+                document.getElementById('trxDetails').style.display = 'none';
+            }
+        }
+
+        // 3. Aksi Bayar
+        async function aksiBayar() {
+            const res = await fetch(`/api/transactions/${currentCode}/pay`, { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            cekTransaksi(); // Refresh tampilan
+        }
+
+        // 4. Aksi Kirim
+        async function aksiKirim() {
+            const awb = prompt("Masukkan Nomor Resi Pengiriman:");
+            if(!awb) return;
+            const res = await fetch(`/api/transactions/${currentCode}/ship`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ awb })
+            });
+            const data = await res.json();
+            alert(data.message);
+            cekTransaksi();
+        }
+
+        // 5. Aksi Terima
+        async function aksiTerima() {
+            if(!confirm("Yakin barang sudah diterima dan sesuai? Dana akan dilepas ke penjual.")) return;
+            const res = await fetch(`/api/transactions/${currentCode}/confirm`, { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            cekTransaksi();
+        }
+    </script>
+</body>
+</html>

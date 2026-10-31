@@ -1,0 +1,4 @@
+node_modules/
+rekber.db
+.env
+*.log
